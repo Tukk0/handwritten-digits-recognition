@@ -8,23 +8,15 @@ Usage:
 
 from __future__ import annotations
 
+import sys
 import time
-import warnings
 from pathlib import Path
 
 import git
-from hydra import compose, initialize
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger, TensorBoardLogger
-
-warnings.filterwarnings(
-    "default",
-    message=".*requires PyTorch.*",
-    category=UserWarning,
-    module="torchvision",
-)
 
 
 def _get_git_commit() -> str:
@@ -35,15 +27,8 @@ def _get_git_commit() -> str:
         return "unknown"
 
 
-def _load_config(**overrides) -> DictConfig:
-    """Load Hydra config with optional CLI overrides."""
-    with initialize(version_base=None, config_path="configs", job_name="train"):
-        cfg = compose(config_name="train", overrides=overrides)
-    return cfg
-
-
 def train(cfg: DictConfig) -> None:
-    """Training function with composed Hydra config."""
+    """Training loop using PyTorch Lightning with full logging."""
     git_sha = _get_git_commit()
     print(f"Training started — git commit: {git_sha}")
 
@@ -64,14 +49,19 @@ def train(cfg: DictConfig) -> None:
 
     mlflow_logger: MLFlowLogger | None = None
     try:
+        import mlflow
+
         mlflow_logger = MLFlowLogger(
             experiment_name=cfg.logging.mlflow_experiment_name,
             save_dir="./mlruns",
+            prefix="",
         )
-        mlflow_logger.experiment.log_params(params)
-    except Exception:
-        mlflow_logger = None
-        print("MLFlow not available — using TensorBoard only")
+        with mlflow.start_run(run_id=mlflow_logger.run_id):
+            for key, value in params.items():
+                mlflow.log_param(key, value)
+        del mlflow
+    except Exception as error:
+        print(f"MLFlow logging failed ({error}) — using TensorBoard-only")
 
     tb_logger = TensorBoardLogger(log_dir, name="digits")
 
@@ -129,27 +119,26 @@ def train(cfg: DictConfig) -> None:
     trainer.test(model, datamodule=data_module)
 
     print(f"Training complete. Logs saved to: {log_dir}")
+    print(f"Metrics logged to TensorBoard: {log_dir}")
 
 
-def train_cli(
-    max_epochs: int = 5,
-    lr: float = 0.001,
-    weight_decay: float | None = None,
-) -> None:
-    """Command-line entry point via Fire + Hydra compose."""
-    with initialize(version_base=None, config_path="configs", job_name="train"):
-        cfg = compose(config_name="train")
-    extra = OmegaConf.create({
-        "training": {
-            "max_epochs": max_epochs,
-            "optimizer": {"lr": lr},
-        }
-    })
-    if weight_decay is not None:
-        extra.training.optimizer.weight_decay = weight_decay
-    cfg = OmegaConf.merge(cfg, extra)
+def main(cfg: DictConfig) -> None:
+    """Entrypoint — Hydra composes the config, validates it, and calls train()."""
     train(cfg)
 
 
 if __name__ == "__main__":
-    train_cli()
+    from hydra import compose, initialize
+
+    def _load_config(overrides: list[str]) -> DictConfig:
+        """Load Hydra config with CLI overrides."""
+        with initialize(version_base=None, config_path="configs", job_name="train"):
+            return compose(config_name="train", overrides=overrides)
+
+    config_overrides: list[str] = []
+    for arg in sys.argv[1:]:
+        if "=" in arg and not arg.startswith("-"):
+            config_overrides.append(arg)
+
+    cfg = _load_config(config_overrides) if config_overrides else _load_config([])
+    train(cfg)

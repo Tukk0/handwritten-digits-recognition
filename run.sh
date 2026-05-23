@@ -1,17 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# One-command pipeline: train -> convert to ONNX -> verify consistency
-# Usage (local): ./run.sh
-# Usage (Docker): docker run --rm digit-recognition run.sh
-#
-# Quick commands:
-#   ./run.sh train       - Train model (5 epochs by default, override with EPOCHS=N)
-#   ./run.sh onnx        - Export saved model to ONNX + verify
-#   ./run.sh test        - Run pytest
-#   ./run.sh lint        - Run ruff check
-#   ./run.sh docker      - Build & run via docker
-#   ./run.sh docker-all  - Full pipeline via docker-compose
+# Quick project scripts:
+#   ./run.sh           - Full pipeline (train -> onnx -> verify)
+#   ./run.sh train 10  - Train model (10 epochs)
+#   ./run.sh onnx      - Export last checkpoint to ONNX + verify
+#   ./run.sh test      - Run pytest
+#   ./run.sh lint      - Run ruff check
+#   ./run.sh docker    - Build & run via docker
+#   ./run.sh docker-all - Full pipeline via docker-compose
 
 case "${1:-run}" in
     run)
