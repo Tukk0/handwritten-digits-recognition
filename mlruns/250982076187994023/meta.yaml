@@ -1,0 +1,8 @@
+artifact_location: file:///Users/talistov/Desktop/apps/MLOps/mlruns/250982076187994023
+creation_time: 1779527877576
+experiment_id: '250982076187994023'
+last_update_time: 1779527877576
+lifecycle_stage: active
+name: digit-recognition
+trace_location: null
+workspace: default
