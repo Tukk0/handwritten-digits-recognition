@@ -32,12 +32,23 @@ except ImportError:
     print('Run: pip install tensorrt')
     sys.exit(0)
 
-import pycuda.driver as cuda
-import pycuda.autoprivity
-from polygraphy import cuda as poly_cuda
-from polygraphy.backend.onnx import OnnxModel
-from polygraphy.backend.trt import CreateConfig, engine_from_onnx, save_engine
-from polygraphy.logger import set_logging_level
+try:
+    import pycuda.driver as cuda
+    import pycuda.autoinit
+except ImportError:
+    print('pycuda not installed — skipping TensorRT build.')
+    print('Run: pip install pycuda')
+    sys.exit(0)
+
+try:
+    from polygraphy import cuda as poly_cuda
+    from polygraphy.backend.onnx import OnnxModel
+    from polygraphy.backend.trt import CreateConfig, engine_from_onnx, save_engine
+    from polygraphy.logger import set_logging_level
+except ImportError:
+    print('polygraphy not installed — skipping TensorRT build.')
+    print('Run: pip install polygraphy')
+    sys.exit(0)
 
 set_logging_level('ERROR')
 

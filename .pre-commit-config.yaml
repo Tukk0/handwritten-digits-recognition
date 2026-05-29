@@ -4,15 +4,22 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        exclude: ^(mlruns/|logs/|data/|checkpoints/|\.dvc/cache|__pycache__)
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-json
       - id: check-toml
       - id: detect-private-key
 
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [yaml, json, toml, markdown, shell]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.11
     hooks:
       - id: ruff
-        args: [ --fix ]
+        args: [--fix]
       - id: ruff-format

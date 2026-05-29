@@ -8,6 +8,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
+import torchmetrics
 import torchvision.models as models
 from pytorch_lightning import LightningModule
 
@@ -88,6 +89,11 @@ class DigitModel(LightningModule):
             "T_max": 30,
             "eta_min": 1e-6,
         }
+        self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=10)
+        self.val_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=10)
+        self.val_precision = torchmetrics.Precision(task="multiclass", num_classes=10, average="macro")
+        self.val_recall = torchmetrics.Recall(task="multiclass", num_classes=10, average="macro")
+        self.test_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=10)
 
     def forward(self, x: torch.Tensor) -> dict:
         logits = self.model(x)
@@ -100,6 +106,8 @@ class DigitModel(LightningModule):
         out = self(images)
         loss = self.loss_fn(out["logits"], labels)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.train_accuracy(out["predictions"], labels)
+        self.log("train_accuracy", self.train_accuracy, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -107,11 +115,12 @@ class DigitModel(LightningModule):
         out = self(images)
         loss = self.loss_fn(out["logits"], labels)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        preds = out["predictions"]
-        class_names = {"accuracy": "_accuracy", "precision": "_precision", "recall": "_recall"}
-        for metric_name, method_name in class_names.items():
-            score = getattr(self, method_name)(preds, labels)
-            self.log(f"val_{metric_name}", score, on_epoch=True)
+        self.val_accuracy(out["predictions"], labels)
+        self.log("val_accuracy", self.val_accuracy)
+        self.val_precision(out["predictions"], labels)
+        self.log("val_precision", self.val_precision)
+        self.val_recall(out["predictions"], labels)
+        self.log("val_recall", self.val_recall)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -119,7 +128,8 @@ class DigitModel(LightningModule):
         out = self(images)
         loss = self.loss_fn(out["logits"], labels)
         self.log("test_loss", loss, on_epoch=True)
-        self.log("test_accuracy", self._accuracy(out["predictions"], labels), on_epoch=True)
+        self.test_accuracy(out["predictions"], labels)
+        self.log("test_accuracy", self.test_accuracy)
         return loss
 
     def configure_optimizers(self):
@@ -129,23 +139,4 @@ class DigitModel(LightningModule):
         t_max = self._scheduler_cfg.get("T_max", 30)
         eta_min = self._scheduler_cfg.get("eta_min", 1e-6)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max, eta_min=eta_min)
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
-        }
-
-    @staticmethod
-    def _accuracy(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        return (preds == targets).float().mean()
-
-    @staticmethod
-    def _precision(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        tp = ((preds == targets) & (preds > 0)).float().sum()
-        tp_fp = (preds > 0).float().sum()
-        return tp / (tp_fp + 1e-8)
-
-    @staticmethod
-    def _recall(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        tp = ((preds == targets) & (targets > 0)).float().sum()
-        tp_fn = (targets > 0).float().sum()
-        return tp / (tp_fn + 1e-8)
+        return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"}}

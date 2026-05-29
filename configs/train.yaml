@@ -5,3 +5,7 @@ defaults:
   - logging
   - inference
   - _self_
+
+hydra:
+  job:
+    name: train

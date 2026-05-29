@@ -51,13 +51,19 @@ weights/
 
 # Data and models cache
 data/
-models/
+models/*
+!models/digit_recognition/
+models/digit_recognition/*
+!models/digit_recognition/config.pbtxt
 logs/
 plots/
 output/
 *.csv
 *.json
 *.tsv
+
+# MLflow
+mlruns/
 
 # DVC
 .dvc/cache

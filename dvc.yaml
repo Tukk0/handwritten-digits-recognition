@@ -1,8 +1,7 @@
 stages:
   download_data:
-    cmd: python src/download_data.py
+    cmd: python -m digit_recognition.download_data use_dvc=False
     deps:
-      - src/download_data.py
+      - digit_recognition/download_data.py
     outs:
-      - data/mnist:
-          cache: false
+      - data/MNIST/raw

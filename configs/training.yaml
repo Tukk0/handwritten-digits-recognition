@@ -12,6 +12,7 @@ training:
   gradient_clip_val: 1.0
   devices: 1
   precision: 16-mixed
+  accelerator: auto
   callbacks:
     - model_checkpoint
     - early_stopping

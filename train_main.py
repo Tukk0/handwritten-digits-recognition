@@ -1,10 +1,4 @@
-"""
-Training entry with Hydra + PyTorch Lightning.
-
-Usage:
-    python train.py
-    python train.py training.max_epochs=50 training.optimizer.lr=0.0005
-"""
+"""Entrypoint for training - placed at project root for Hydra compatibility."""
 
 from __future__ import annotations
 
@@ -13,10 +7,13 @@ from pathlib import Path
 
 import git
 from hydra import compose, initialize
+from hydra.core.global_hydra import GlobalHydra
 from omegaconf import DictConfig
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger, TensorBoardLogger
+
+_ROOT = Path(__file__).resolve().parent
 
 
 def _get_git_commit() -> str:
@@ -29,17 +26,14 @@ def _get_git_commit() -> str:
 
 def _load_config(overrides: list[str]) -> DictConfig:
     """Load Hydra config with CLI overrides."""
+    GlobalHydra.instance().clear()
     with initialize(version_base=None, config_path="configs", job_name="train"):
         return compose(config_name="train", overrides=overrides)
 
 
 def _parse_cli_overrides() -> list[str]:
-    """Extract Hydra-style overrides from sys.argv."""
-    config_overrides: list[str] = []
-    for arg in sys.argv[1:]:
-        if "=" in arg and not arg.startswith("-"):
-            config_overrides.append(arg)
-    return config_overrides
+    """Extract Hydra-style overrides from sys.argv (skip script name)."""
+    return [arg for arg in sys.argv[1:] if "=" in arg and not arg.startswith("-")]
 
 
 def train(cfg: DictConfig) -> None:
@@ -47,7 +41,7 @@ def train(cfg: DictConfig) -> None:
     git_sha = _get_git_commit()
     print(f"Training started — git commit: {git_sha}")
 
-    log_dir = str(Path.cwd() / "logs")
+    log_dir = str(_ROOT / "logs")
 
     params: dict[str, str | int | float] = {
         "optimizer_name": str(cfg.training.optimizer.name),
@@ -68,7 +62,7 @@ def train(cfg: DictConfig) -> None:
 
         mlflow_logger = MLFlowLogger(
             experiment_name=cfg.logging.mlflow_experiment_name,
-            save_dir="./mlruns",
+            save_dir=str(_ROOT / "mlruns"),
             prefix="",
         )
         with mlflow.start_run(run_id=mlflow_logger.run_id):
@@ -87,7 +81,7 @@ def train(cfg: DictConfig) -> None:
         verbose=True,
     )
     checkpoint_cb = ModelCheckpoint(
-        dirpath="checkpoints",
+        dirpath=str(_ROOT / "checkpoints"),
         monitor="val_loss",
         mode="min",
         save_top_k=1,
@@ -99,6 +93,7 @@ def train(cfg: DictConfig) -> None:
     trainer = Trainer(
         max_epochs=cfg.training.max_epochs,
         devices=cfg.training.devices,
+        accelerator=cfg.training.accelerator,
         logger=logger_list,
         callbacks=[early_stop, checkpoint_cb],
         gradient_clip_val=cfg.training.gradient_clip_val,
@@ -106,11 +101,11 @@ def train(cfg: DictConfig) -> None:
         default_root_dir=log_dir,
     )
 
-    from src.data_module import MNISTDataModule
-    from src.model import DigitModel
+    from digit_recognition.data_module import MNISTDataModule
+    from digit_recognition.model import DigitModel
 
     data_module = MNISTDataModule(
-        data_dir="./data",
+        data_dir=str(_ROOT / "data"),
         batch_size=cfg.data.batch_size,
         num_workers=cfg.data.num_workers,
         image_size=tuple(cfg.data.image_size),

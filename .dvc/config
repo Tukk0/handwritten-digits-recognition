@@ -1,5 +1,6 @@
 [core]
     autostage = true
+    remote = "data"
 [dvc]
     version = 4
     cache = cache
@@ -22,9 +23,6 @@
 
 [cache "models"]
     dir = .dvc/cache-models
-
-[core]
-    remote = "data"
 
 [remote "default"]
     url = .dvc/cache-default

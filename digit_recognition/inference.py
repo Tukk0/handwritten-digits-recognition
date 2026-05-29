@@ -35,7 +35,7 @@ def _infer_model_params(state_dict):
 
 
 def load_model(model_path, device="cpu"):
-    from src.model import LeNet5, LeNet5WithResNet18
+    from digit_recognition.model import LeNet5, LeNet5WithResNet18
 
     checkpoint = torch.load(model_path, map_location=device, weights_only=True)
     sd = checkpoint.get("state_dict", checkpoint)
@@ -63,7 +63,7 @@ def load_model(model_path, device="cpu"):
 
 
 def preprocess_image(image_path, device="cpu"):
-    from src.preprocessing import normalize_grayscale, resize_image
+    from digit_recognition.preprocessing import normalize_grayscale, resize_image
 
     pil_img = Image.open(image_path).convert("L")
     arr = np.array(pil_img)

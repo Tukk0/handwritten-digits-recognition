@@ -14,7 +14,7 @@ case "${1:-run}" in
     run)
         echo "=== Running full MLOps pipeline ==="
         echo "Step 1/3: Training MNIST model (5 epochs)..."
-        python train.py training.max_epochs=5
+        python train_main.py training.max_epochs=5
         echo "Step 2/3: Exporting to ONNX..."
         LATEST=$(ls -t checkpoints/*.ckpt 2>/dev/null | head -1)
         if [ -z "$LATEST" ]; then
@@ -22,8 +22,8 @@ case "${1:-run}" in
             exit 1
         fi
         cp -- "$LATEST" checkpoints/best.pt
-        python convert.py export_onnx checkpoints/best.pt model.onnx
-        python convert.py test_onnx_consistency checkpoints/best.pt model.onnx
+        python scripts/convert.py export_onnx checkpoints/best.pt model.onnx
+        python scripts/convert.py test_onnx_consistency checkpoints/best.pt model.onnx
         echo "=== Pipeline complete ==="
         echo ""
         echo "Next steps:"
@@ -33,7 +33,7 @@ case "${1:-run}" in
     train)
         EPOCHS="${2:-5}"
         echo "Training MNIST model for $EPOCHS epochs..."
-        python train.py training.max_epochs="$EPOCHS"
+        python train_main.py training.max_epochs="$EPOCHS"
         ;;
     onnx)
         echo "Exporting latest checkpoint to ONNX..."
@@ -43,8 +43,8 @@ case "${1:-run}" in
         fi
         LATEST=$(ls -t checkpoints/*.ckpt 2>/dev/null | head -1)
         cp -- "$LATEST" checkpoints/best.pt
-        python convert.py export_onnx "checkpoints/best.pt" "model.onnx"
-        python convert.py test_onnx_consistency "checkpoints/best.pt" "model.onnx"
+        python scripts/convert.py export_onnx "checkpoints/best.pt" "model.onnx"
+        python scripts/convert.py test_onnx_consistency "checkpoints/best.pt" "model.onnx"
         ;;
     inference)
         MODEL_PATH="${2:-checkpoints/best.pt}"

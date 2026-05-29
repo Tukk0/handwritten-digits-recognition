@@ -17,7 +17,7 @@ def resize_image(
 
     Returns a float32 array with values in [0, 1].
     """
-    resized = cv2.resize(image, dsize=(0, 0), fx=1.0, fy=1.0, interpolation=cv2.INTER_AREA)
+    resized = cv2.resize(image, dsize=target_size, interpolation=cv2.INTER_AREA)
     if resized.dtype != np.float32:
         resized = resized.astype(np.float32)
     # normalise to [0, 1]

@@ -22,7 +22,7 @@ def predict(
     device: str = "cpu",
 ) -> None:
     """Run inference on an image using a trained model."""
-    from src.inference import load_model, predict_with_probs
+    from digit_recognition.inference import load_model, predict_with_probs
 
     model = load_model(model_path, device=device)
     probs = predict_with_probs(model, image_path, device=device)
@@ -37,7 +37,7 @@ def onnx(
     onnx: str,
 ) -> None:
     """Export model to ONNX format and verify."""
-    from convert import export_onnx, test_onnx_consistency
+    from scripts.convert import export_onnx, test_onnx_consistency
 
     export_onnx(model, onnx)
     test_onnx_consistency(model, onnx)

@@ -16,7 +16,8 @@ from torchvision.datasets import MNIST
 
 def export_onnx(model_path: str, onnx_path: str, input_shape_str: str = "1,1,28,28") -> None:
     """Load PyTorch checkpoint -> export to ONNX -> simplify."""
-    from src.model import LeNet5, LeNet5WithResNet18
+    from digit_recognition.inference import _infer_model_params
+    from digit_recognition.model import LeNet5, LeNet5WithResNet18
 
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
     sd = checkpoint.get("state_dict", checkpoint)
@@ -30,13 +31,14 @@ def export_onnx(model_path: str, onnx_path: str, input_shape_str: str = "1,1,28,
     if has_resnet:
         model = LeNet5WithResNet18(num_classes=10)
     else:
+        conv1_out, conv2_out, fc1_features, fc2_features, batch_norm_flag = _infer_model_params(sd)
         model = LeNet5(
-            conv1_out=32,
-            conv2_out=64,
-            fc1_features=128,
-            fc2_features=10,
+            conv1_out=conv1_out,
+            conv2_out=conv2_out,
+            fc1_features=fc1_features,
+            fc2_features=fc2_features,
             dropout_prob=0.5,
-            batch_norm=True,
+            batch_norm=batch_norm_flag,
         )
     model.load_state_dict(sd)
     model.eval()
@@ -67,7 +69,7 @@ def test_onnx_consistency(
     test_image: str | None = None,
 ) -> None:
     """Compare PyTorch vs ONNX predictions on a random MNIST sample."""
-    from src.inference import preprocess_image
+    from digit_recognition.inference import preprocess_image
 
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
     sd = checkpoint.get("state_dict", checkpoint)
@@ -78,19 +80,21 @@ def test_onnx_consistency(
 
     has_resnet = any("resnet" in k for k in sd)
     if has_resnet:
-        from src.model import LeNet5WithResNet18
+        from digit_recognition.model import LeNet5WithResNet18
 
         model = LeNet5WithResNet18(num_classes=10)
     else:
-        from src.model import LeNet5
+        from digit_recognition.inference import _infer_model_params
+        from digit_recognition.model import LeNet5
 
+        conv1_out, conv2_out, fc1_features, fc2_features, batch_norm_flag = _infer_model_params(sd)
         model = LeNet5(
-            conv1_out=32,
-            conv2_out=64,
-            fc1_features=128,
-            fc2_features=10,
+            conv1_out=conv1_out,
+            conv2_out=conv2_out,
+            fc1_features=fc1_features,
+            fc2_features=fc2_features,
             dropout_prob=0.5,
-            batch_norm=True,
+            batch_norm=batch_norm_flag,
         )
     model.load_state_dict(sd)
     model.eval()
