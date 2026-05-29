@@ -1,7 +1,0 @@
-stages:
-  download_data:
-    cmd: python -m digit_recognition.download_data use_dvc=False
-    deps:
-      - digit_recognition/download_data.py
-    outs:
-      - data/MNIST/raw

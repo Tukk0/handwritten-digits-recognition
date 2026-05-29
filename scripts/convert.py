@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import fire
@@ -12,6 +14,20 @@ import onnxsim
 import torch
 import torchvision.transforms as transforms
 from torchvision.datasets import MNIST
+
+
+def _ensure_data() -> None:
+    data_dir = Path(__file__).resolve().parent.parent / "data" / "MNIST" / "raw"
+    if data_dir.exists() and any(data_dir.iterdir()):
+        return
+    print("Pulling data from DVC remote...")
+    result = subprocess.run(
+        [sys.executable, "-m", "dvc", "pull"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print(result.stdout)
 
 
 def export_onnx(model_path: str, onnx_path: str, input_shape_str: str = "1,1,28,28") -> None:
@@ -69,6 +85,7 @@ def test_onnx_consistency(
     test_image: str | None = None,
 ) -> None:
     """Compare PyTorch vs ONNX predictions on a random MNIST sample."""
+    _ensure_data()
     from digit_recognition.inference import preprocess_image
 
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)

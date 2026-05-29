@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger, TensorBoardLogger
 
+from digit_recognition.plots_callback import PlotsCallback
+
 _ROOT = Path(__file__).resolve().parent
 
 
@@ -22,6 +25,27 @@ def _get_git_commit() -> str:
         return repo.head.object.hexsha
     except git.InvalidGitRepositoryError:
         return "unknown"
+
+
+def _ensure_data() -> None:
+    """Pull data from DVC remote if not already present."""
+    data_dir = _ROOT / "data" / "MNIST" / "raw"
+    if data_dir.exists() and any(data_dir.iterdir()):
+        return
+    print("Pulling data from DVC remote...")
+    result = subprocess.run(
+        [sys.executable, "-m", "dvc", "pull"],
+        cwd=str(_ROOT),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print("DVC pull failed, downloading directly...")
+        from digit_recognition.download_data import download_data
+
+        download_data(str(_ROOT / "data"))
+    else:
+        print(result.stdout)
 
 
 def _load_config(overrides: list[str]) -> DictConfig:
@@ -38,6 +62,7 @@ def _parse_cli_overrides() -> list[str]:
 
 def train(cfg: DictConfig) -> None:
     """Training loop using PyTorch Lightning with full logging."""
+    _ensure_data()
     git_sha = _get_git_commit()
     print(f"Training started — git commit: {git_sha}")
 
@@ -95,7 +120,7 @@ def train(cfg: DictConfig) -> None:
         devices=cfg.training.devices,
         accelerator=cfg.training.accelerator,
         logger=logger_list,
-        callbacks=[early_stop, checkpoint_cb],
+        callbacks=[early_stop, checkpoint_cb, PlotsCallback(save_dir=str(_ROOT / "plots"))],
         gradient_clip_val=cfg.training.gradient_clip_val,
         precision=cfg.training.precision,
         default_root_dir=log_dir,

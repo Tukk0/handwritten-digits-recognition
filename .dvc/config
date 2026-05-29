@@ -1,29 +1,9 @@
 [core]
     autostage = true
-    remote = "data"
-[dvc]
-    version = 4
-    cache = cache
-    cache.level = 2
-
-[cache]
-    dir = .dvc/cache
-    shared = true
+    remote = data
 
 [remote "data"]
-    url = .dvc/cache-data
-    shared = true
+    url = /Users/talistov/.dvc-remote/data
 
 [remote "models"]
-    url = .dvc/cache-models
-    shared = true
-
-[cache "data"]
-    dir = .dvc/cache-data
-
-[cache "models"]
-    dir = .dvc/cache-models
-
-[remote "default"]
-    url = .dvc/cache-default
-    shared = true
+    url = /Users/talistov/.dvc-remote/models

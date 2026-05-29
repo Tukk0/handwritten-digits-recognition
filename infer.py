@@ -16,12 +16,28 @@ from pathlib import Path
 import fire
 
 
+def _ensure_data() -> None:
+    """Pull data from DVC remote if not already present."""
+    data_dir = Path(__file__).resolve().parent / "data" / "MNIST" / "raw"
+    if data_dir.exists() and any(data_dir.iterdir()):
+        return
+    print("Pulling data from DVC remote...")
+    result = subprocess.run(
+        [sys.executable, "-m", "dvc", "pull"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print(result.stdout)
+
+
 def predict(
     model_path: str,
     image_path: str,
     device: str = "cpu",
 ) -> None:
     """Run inference on an image using a trained model."""
+    _ensure_data()
     from digit_recognition.inference import load_model, predict_with_probs
 
     model = load_model(model_path, device=device)
@@ -37,6 +53,7 @@ def onnx(
     onnx: str,
 ) -> None:
     """Export model to ONNX format and verify."""
+    _ensure_data()
     from scripts.convert import export_onnx, test_onnx_consistency
 
     export_onnx(model, onnx)

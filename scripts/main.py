@@ -50,7 +50,7 @@ def _run_bot() -> None:
             "inputs": [
                 {
                     "name": "input",
-                    "shape": [1, 28, 28],
+                    "shape": [1, 1, 28, 28],
                     "datatype": "FP32",
                     "data": img.flatten().tolist(),
                 }
